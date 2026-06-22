@@ -1,0 +1,10 @@
+# Ruff: Linter & Formatter siêu nhanh cho Python
+
+# + Linter: Nó sẽ tự động quét qua toàn bộ dự án của bạn để bắt các lỗi logic hoặc code thừa:
+# 1) - Bạn import một thư viện vào nhưng... quên không xài => ruff sẽ báo để bạn xóa đi cho sạch code
+# 2) - Bạn tạo một biến ra xong bỏ xó (không dùng đến) => ruff sẽ nhắc nhở
+# 3) - Ruff có thể phát hiện một số pattern tiềm ẩn rủi ro bảo mật => ruff sẽ huýt còi cảnh báo
+
+# + Formatter: Nếu bạn gõ code bừa bãi, thụt lề lung tung, chỗ dùng dấu nháy đơn ' ', chỗ dùng dấu nháy kép " "... 
+# Chỉ cần bấm một nút, ruff sẽ tự động định dạng lại toàn bộ dự án về một chuẩn đẹp mắt, thẳng hàng tăm tắp theo style nhất quán tương thích với Black
+ruff>=0.3.0
