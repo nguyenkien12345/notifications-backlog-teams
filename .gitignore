@@ -1,0 +1,70 @@
+# ==============================================================================
+# OS Files
+# ==============================================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ==============================================================================
+# IDEs and Editors
+# ==============================================================================
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*~
+
+# ==============================================================================
+# Python Artifacts & Caches
+# ==============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.tox/
+.nox/
+.coverage
+.htmlcov/
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+
+# ==============================================================================
+# Environments & Packages
+# ==============================================================================
+.env
+.env.*
+!.env.example
+venv/
+.venv/
+env/
+ENV/
+bin/
+lib/
+include/
+share/
+
+# ==============================================================================
+# Application Local Storage & States
+# ==============================================================================
+# Ignore all generated states, databases, and temporary logs
+storage/*
+!storage/.gitkeep
+*.tmp
+*.bak
