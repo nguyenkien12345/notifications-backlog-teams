@@ -1,6 +1,4 @@
-from typing import Optional
-
-def truncate_text(text: Optional[str], max_length: int = 500, suffix: str = "...") -> str:
+def truncate_text(text: str | None, max_length: int = 500, suffix: str = "...") -> str:
     if not text:
         return ""
     # Kiểm tra tổng số ký tự của đoạn văn (len(text)). Nếu nó dài hơn số lượng tối đa cho phép (max_length)
@@ -16,20 +14,17 @@ def build_backlog_url(
     # Tên miền mặc định của Backlog
     domain: str,
     # Mã dự án (ví dụ: PROJ) (Không bắt buộc)
-    project_key: Optional[str] = None,
+    project_key: str | None = None,
     # Mã công việc cụ thể (ví dụ: PROJ-123)
-    issue_key: Optional[str] = None,
+    issue_key: str | None = None,
     # ID của bình luận cụ thể bên trong công việc
-    comment_id: Optional[int] = None,
+    comment_id: int | None = None,
     # Đánh dấu xem đây có phải là link dẫn đến trang Git Pull Request (yêu cầu duyệt code) hay không
     is_pull_request: bool = False,
 ) -> str:
-    # Nếu người dùng nhập đầy đủ có dấu chấm (ví dụ: my-space.backlog.com), hệ thống chỉ cần thêm https:// vào đầu thành: https://my-space.backlog.com
-    if "." in space_id:
-        base_url = f"https://{space_id}"
-    # Nếu người dùng chỉ nhập chữ ngắn gọn (ví dụ: my-space), hệ thống sẽ tự ráp thêm tên miền vào thành: https://my-space.backlog.com
-    else:
-        base_url = f"https://{space_id}.{domain}"
+    # Nếu người dùng nhập đầy đủ có dấu chấm (ví dụ: my-space.backlog.com), hệ thống thêm https://
+    # Nếu chỉ nhập chữ ngắn gọn (ví dụ: my-space), hệ thống ráp thêm tên miền thành: https://my-space.backlog.com
+    base_url = f"https://{space_id}" if "." in space_id else f"https://{space_id}.{domain}"
 
     # Trường hợp 1 (Ưu tiên cao nhất): Nếu có truyền vào issue_key (tức là muốn link dẫn đến một công việc cụ thể).
     if issue_key:
@@ -45,5 +40,5 @@ def build_backlog_url(
     # Nếu chỉ có mỗi mã dự án project_key thô thôi (không phải công việc, không phải pull request). Hàm sẽ dẫn người dùng về trang chủ của dự án đó: https://my-space.backlog.com/projects/PROJ.
     elif project_key:
         return f"{base_url}/projects/{project_key}"
-        
+
     return base_url

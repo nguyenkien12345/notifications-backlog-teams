@@ -1,6 +1,6 @@
 import logging
-from pathlib import Path
-from pydantic import SecretStr, Field
+
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # (pydantic) SecretStr: Secure string type that hides sensitive values in logs and debug output.
@@ -32,27 +32,26 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # Python sẽ thử tạo ra một đối tượng cụ thể tên là settings từ cái khuôn Settings ở trên. Quá trình này sẽ kích hoạt việc đọc file .env và kiểm tra xem có thiếu biến bắt buộc nào không, hoặc có biến nào sai kiểu dữ liệu không
 # settings = Settings()
 
+
 class Settings(BaseSettings):
     # Backlog Settings
     BACKLOG_SPACE_ID: str = Field(..., alias="BACKLOG_SPACE_ID")
     BACKLOG_API_KEY: SecretStr = Field(..., alias="BACKLOG_API_KEY")
     BACKLOG_DOMAIN: str = Field("backlog.com", alias="BACKLOG_DOMAIN")
     ONLY_UNREAD: bool = Field(True, alias="ONLY_UNREAD")
-    
+
     # Teams Settings
     TEAMS_WEBHOOK_URL: SecretStr = Field(..., alias="TEAMS_WEBHOOK_URL")
-    
+
     # Bot Settings
     SYNC_INTERVAL_MINUTES: int = Field(5, alias="SYNC_INTERVAL_MINUTES")
     STATE_FILE_PATH: str = Field("storage/state.json", alias="STATE_FILE_PATH")
     LOG_LEVEL: str = Field("INFO", alias="LOG_LEVEL")
 
     model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore",
-        populate_by_name=True
+        env_file=".env", env_file_encoding="utf-8", extra="ignore", populate_by_name=True
     )
+
 
 # Load settings instance
 try:
@@ -71,5 +70,10 @@ except Exception as e:
 
 # Perform validation of placeholders
 logger = logging.getLogger("config")
-if settings.BACKLOG_SPACE_ID == "your-space-id" or settings.BACKLOG_API_KEY.get_secret_value() == "your-api-key":
-    logger.warning("Configuration loaded but placeholder values (e.g. 'your-space-id', 'your-api-key') were detected. Please update your .env file.")
+if (
+    settings.BACKLOG_SPACE_ID == "your-space-id"
+    or settings.BACKLOG_API_KEY.get_secret_value() == "your-api-key"
+):
+    logger.warning(
+        "Configuration loaded but placeholder values (e.g. 'your-space-id', 'your-api-key') were detected. Please update your .env file."
+    )
