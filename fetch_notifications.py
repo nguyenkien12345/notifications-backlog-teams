@@ -138,6 +138,16 @@ async def main():
         print("\n[Lỗi Chưa Xác Định] Có lỗi xảy ra khi thực thi:", file=sys.stderr)
         traceback.print_exc(file=sys.stderr)
 
+# __name__ là một biến đặc biệt (special variable) mà Python tự gán khi module được load. Giá trị của biến __name__ này sẽ thay đổi phụ thuộc vào cách bạn gọi file đó:
+# - Trường hợp 1: Bạn chủ động mở Terminal và gõ chạy trực tiếp file này: python script_kiem_tra.py
+# => Python hiểu đây là file gốc (file chính) được kích hoạt. Nó sẽ tự động gán giá trị cho biến __name__ thành chuỗi chữ "__main__".
+# Lúc này điều kiện if "__main__" == "__main__" hợp lệ (Đúng) => Các dòng code thụt lề bên trong lệnh if sẽ được phép chạy.
 
+# - Trường hợp 2: File này được một file khác gọi (Import) vào làm thư viện
+# Giả sử ở file main.py, bạn gõ lệnh: from services import fetch_recent_notifications.
+# Lúc này, Python hiểu file này chỉ là một người phụ tá (Module phụ) được gọi đến thôi. Nó sẽ gán giá trị cho biến __name__ thành chính tên của file đó (ví dụ: "script_kiem_tra").
+# Lúc này điều kiện if "script_kiem_tra" == "__main__" bị sai (Fails) => Toàn bộ đoạn code bên trong lệnh if sẽ bị khóa lại và bỏ qua.
 if __name__ == "__main__":
+    # - Nếu bạn gõ main() khơi khơi, Python sẽ chỉ trả về một đối tượng trạng thái chờ chứ hoàn toàn không chạy một dòng code nào bên trong hàm đó cả.
+    # - Để chạy được một hàm async, bạn cần một Event Loop đứng ra quản lý thời gian và luồng chạy ngầm cho nó.
     asyncio.run(main())
