@@ -9,11 +9,32 @@ class Project(BaseModel):
     name: str
 
 
+class User(BaseModel):
+    id: int
+    userId: str | None = None
+    name: str
+    mailAddress: str | None = None
+
+
+class Priority(BaseModel):
+    id: int
+    name: str
+
+
+class Status(BaseModel):
+    id: int
+    name: str
+
+
 class Issue(BaseModel):
     id: int
     issueKey: str
     summary: str
     description: str | None = None
+    createdUser: User | None = None
+    assignee: User | None = None
+    status: Status | None = None
+    priority: Priority | None = None
 
 
 class Comment(BaseModel):
@@ -27,13 +48,6 @@ class PullRequest(BaseModel):
     number: int
     title: str
     description: str | None = None
-
-
-class User(BaseModel):
-    id: int
-    userId: str | None = None
-    name: str
-    mailAddress: str | None = None
 
 
 class BacklogNotification(BaseModel):

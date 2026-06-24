@@ -111,3 +111,21 @@ class BacklogService:
             except Exception as e:
                 logger.error(f"Unexpected error occurred while fetching Backlog notifications: {e}")
                 raise e
+
+    async def fetch_issue_comment_count(self, issue_id_or_key: str | int) -> int:
+        """
+        Fetch the total number of comments for a specific issue.
+        """
+        url = f"{self.base_url}/issues/{issue_id_or_key}/comments/count"
+        params = {"apiKey": self.api_key}
+
+        logger.debug(f"Fetching comment count for issue {issue_id_or_key}")
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                response = await client.get(url, params=params)
+                response.raise_for_status()
+                data = response.json()
+                return data.get("count", 0)
+            except Exception as e:
+                logger.error(f"Failed to fetch comment count for issue {issue_id_or_key}: {e}")
+                return 0

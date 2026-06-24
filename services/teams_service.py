@@ -29,7 +29,9 @@ class TeamsService:
         # - Nếu tìm thấy, nó lấy màu đó ra. Nếu không tìm thấy, nó sẽ tự động lấy màu mặc định (DEFAULT_THEME_COLOR)
         return THEME_COLORS.get(reason, DEFAULT_THEME_COLOR)
 
-    def build_message_card(self, notification: BacklogNotification) -> dict[str, Any]:
+    def build_message_card(
+        self, notification: BacklogNotification, comment_count: int | None = None
+    ) -> dict[str, Any]:
         emoji = notification.get_action_emoji()
         reason_desc = notification.get_reason_description()
         sender_name = notification.sender.name if notification.sender else "Someone"
@@ -57,6 +59,19 @@ class TeamsService:
         if notification.issue:
             facts.append({"name": "Issue Key", "value": notification.issue.issueKey})
             facts.append({"name": "Summary", "value": notification.issue.summary})
+
+            # Additional details for issue creator, comments, status, assignee, priority
+            if notification.issue.createdUser:
+                facts.append({"name": "Created By", "value": notification.issue.createdUser.name})
+            if notification.issue.assignee:
+                facts.append({"name": "Assignee", "value": notification.issue.assignee.name})
+            if notification.issue.status:
+                facts.append({"name": "Status", "value": notification.issue.status.name})
+            if notification.issue.priority:
+                facts.append({"name": "Priority", "value": notification.issue.priority.name})
+            if comment_count is not None:
+                facts.append({"name": "Total Comments", "value": str(comment_count)})
+
             subtitle = f"{notification.project.projectKey if notification.project else ''} - {notification.issue.issueKey}"
 
             # Chọn nội dung hiển thị: Ưu tiên nội dung bình luận, nếu không có thì lấy mô tả công việc
@@ -109,7 +124,9 @@ class TeamsService:
 
         return card
 
-    def build_adaptive_card_payload(self, notification: BacklogNotification) -> dict[str, Any]:
+    def build_adaptive_card_payload(
+        self, notification: BacklogNotification, comment_count: int | None = None
+    ) -> dict[str, Any]:
         emoji = notification.get_action_emoji()
         reason_desc = notification.get_reason_description()
         sender_name = notification.sender.name if notification.sender else "Someone"
@@ -133,6 +150,19 @@ class TeamsService:
         if notification.issue:
             facts.append({"title": "Issue Key", "value": notification.issue.issueKey})
             facts.append({"title": "Summary", "value": notification.issue.summary})
+
+            # Additional details for issue creator, comments, status, assignee, priority
+            if notification.issue.createdUser:
+                facts.append({"title": "Created By", "value": notification.issue.createdUser.name})
+            if notification.issue.assignee:
+                facts.append({"title": "Assignee", "value": notification.issue.assignee.name})
+            if notification.issue.status:
+                facts.append({"title": "Status", "value": notification.issue.status.name})
+            if notification.issue.priority:
+                facts.append({"title": "Priority", "value": notification.issue.priority.name})
+            if comment_count is not None:
+                facts.append({"title": "Total Comments", "value": str(comment_count)})
+
             subtitle = f"{notification.project.projectKey if notification.project else ''} - {notification.issue.issueKey}"
 
             if notification.comment and notification.comment.content:
@@ -238,10 +268,24 @@ class TeamsService:
             "powerplatform.com" in self.webhook_url or "powerautomate" in self.webhook_url
         )
 
+        comment_count = None
+        if notification.issue:
+            try:
+                from services.backlog_service import BacklogService
+
+                backlog_service = BacklogService()
+                comment_count = await backlog_service.fetch_issue_comment_count(
+                    notification.issue.id
+                )
+            except Exception as e:
+                logger.error(f"Failed to fetch comment count in send_notification: {e}")
+
         if is_power_automate:
-            card_payload = self.build_adaptive_card_payload(notification)
+            card_payload = self.build_adaptive_card_payload(
+                notification, comment_count=comment_count
+            )
         else:
-            card_payload = self.build_message_card(notification)
+            card_payload = self.build_message_card(notification, comment_count=comment_count)
 
         logger.debug(
             f"Sending card to Teams for notification ID {notification.id} (Format: {'AdaptiveCard' if is_power_automate else 'MessageCard'})"
