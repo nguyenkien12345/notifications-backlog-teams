@@ -16,12 +16,6 @@ class SyncService:
         self.state_service = StateService()
 
     async def sync_now(self) -> int:
-        """
-        Executes a single synchronization loop.
-
-        Returns:
-            int: The number of new notifications successfully synced.
-        """
         current_time = datetime.now().isoformat()
         state = self.state_service.get_state()
         last_id = state.last_processed_notification_id
@@ -35,13 +29,14 @@ class SyncService:
             if not notifications:
                 logger.info("No new notifications found in Backlog.")
                 self.state_service.update_state(last_sync_time=current_time, increment_success=True)
+                # 0 ở đây có nghĩa là không có tin nào được đồng bộ
                 return 0
 
             # 2. Filter notifications
             to_process = []
             for n in notifications:
-                # Extra check to ensure ID is strictly greater (though Backlog API minId does this, it's good safety)
                 if n.id <= last_id:
+                    # Bỏ qua
                     continue
                 # If ONLY_UNREAD is enabled, skip notifications that are already read
                 if settings.ONLY_UNREAD and n.alreadyRead:
@@ -53,7 +48,8 @@ class SyncService:
                 logger.info(
                     "New notifications exist but none matched the unread/processing criteria."
                 )
-                # We can update the state to the highest ID fetched, since they are all read/filtered out anyway.
+                # Trường hợp có tin mới (ví dụ có 5 tin), nhưng cả 5 tin này đều đã bị người dùng đọc mất rồi, khiến danh sách to_process trống rỗng.
+                # Lúc này Bot sẽ tìm đến thông báo cuối cùng nằm ở cuối danh sách thô (notifications[-1]), lấy cái ID cao nhất của nó (highest_id) để cập nhật đè vào sổ. Mục đích là để lượt chạy sau Bot không phải quét lại 5 tin đã đọc này nữa.
                 highest_id = notifications[-1].id
                 self.state_service.update_state(
                     last_processed_id=highest_id,
