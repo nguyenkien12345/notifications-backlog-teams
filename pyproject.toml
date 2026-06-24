@@ -8,3 +8,44 @@
 # - venv/bin/python: Đường dẫn tới Python interpreter nằm bên trong Môi trường ảo (Virtual Environment - venv) cục bộ của dự án
 # - Nói với Pyrefly rằng hãy dùng chính xác cục chạy Python nằm trong thư mục venv này vì tất cả thư viện như fastapi, pydantic hay httpx đều cài biệt lập trong thư mục venv này rồi!
 python-interpreter-path = "venv/bin/python"
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+exclude = [
+    ".git",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".venv",
+    "venv",
+    "__pycache__",
+    "build",
+    "dist",
+]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",   # pycodestyle
+    "F",        # Pyflakes
+    "I",        # isort
+    "B",        # flake8-bugbear
+    "C4",       # flake8-comprehensions
+    "UP",       # pyupgrade
+    "N",        # pep8-naming
+    "ARG",      # flake8-unused-arguments
+    "SIM",      # flake8-simplify
+    "RUF",      # Ruff-specific rules
+]
+ignore = ["E501", "N815", "RUF001", "RUF003"]
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+force-single-line = false
+known-first-party = ["api", "constants", "core", "models", "services", "storage", "utils"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
