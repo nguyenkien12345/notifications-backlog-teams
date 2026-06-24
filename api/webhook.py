@@ -95,6 +95,7 @@ async def get_status():
             detail=f"Failed to load status: {e!s}",
         ) from e
 
+
 # - !s có nghĩa là: Hãy tự động gọi hàm str() lên cái biến này cho tôi. Do đó, {e!s} cũng tương đương với {str(e)}
 
 # - Thêm cụm từ from e vào sau lệnh raise HTTPException. Đây là kỹ thuật Exception Chaining (Liên kết chuỗi lỗi).

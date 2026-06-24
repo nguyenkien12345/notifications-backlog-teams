@@ -29,11 +29,11 @@ def start_scheduler():
 
         # Add interval job
         scheduler.add_job(
-            sync_job, # Do something (Chú ý: truyền tên hàm, không có dấu ngoặc tròn ())
-            "interval", # Chế độ lặp đi lặp lại định kỳ (cứ sau mỗi khoảng thời gian cố định)
-            minutes=interval, # Khoảng thời gian lặp lại
-            id="backlog_sync_job", # Đặt id cho job này để phân biệt nếu sau này dự án của bạn có thêm các công việc (job) chạy ngầm khác (như job dọn dẹp log, job báo cáo tuần...)
-            replace_existing=True # Nếu trong bộ nhớ lỡ có một cấu hình cũ trùng tên ID này, hãy xóa nó đi và đè cái mới này lên để tránh xung đột
+            sync_job,  # Do something (Chú ý: truyền tên hàm, không có dấu ngoặc tròn ())
+            "interval",  # Chế độ lặp đi lặp lại định kỳ (cứ sau mỗi khoảng thời gian cố định)
+            minutes=interval,  # Khoảng thời gian lặp lại
+            id="backlog_sync_job",  # Đặt id cho job này để phân biệt nếu sau này dự án của bạn có thêm các công việc (job) chạy ngầm khác (như job dọn dẹp log, job báo cáo tuần...)
+            replace_existing=True,  # Nếu trong bộ nhớ lỡ có một cấu hình cũ trùng tên ID này, hãy xóa nó đi và đè cái mới này lên để tránh xung đột
         )
 
         scheduler.start()
