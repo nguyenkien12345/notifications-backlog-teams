@@ -109,17 +109,150 @@ class TeamsService:
 
         return card
 
-    async def send_notification(self, notification: BacklogNotification) -> bool:
-        card_payload = self.build_message_card(notification)
+    def build_adaptive_card_payload(self, notification: BacklogNotification) -> dict[str, Any]:
+        emoji = notification.get_action_emoji()
+        reason_desc = notification.get_reason_description()
+        sender_name = notification.sender.name if notification.sender else "Someone"
 
-        logger.debug(f"Sending card to Teams for notification ID {notification.id}")
+        # - Build notification title from action emoji, sender name and action description
+        title = f"{emoji} {sender_name} {reason_desc}"
+
+        # - Lấy đường link chi tiết dẫn đến Backlog
+        backlog_url = self.get_backlog_url(notification)
+
+        # - Một thông báo trên Backlog có thể xuất phát từ một Công việc (Issue) hoặc một Yêu cầu duyệt code (Pull Request)
+        # - Khởi tạo 3 biến: facts, text_content, và subtitle
+        facts = []  # Danh sách thông số phụ (facts)
+        subtitle = ""  # Tiêu đề phụ (subtitle)
+        text_content = ""  # Nội dung tin nhắn (text_content)
+
+        if notification.project:
+            facts.append({"title": "Project", "value": notification.project.name})
+            subtitle = notification.project.name
+
+        if notification.issue:
+            facts.append({"title": "Issue Key", "value": notification.issue.issueKey})
+            facts.append({"title": "Summary", "value": notification.issue.summary})
+            subtitle = f"{notification.project.projectKey if notification.project else ''} - {notification.issue.issueKey}"
+
+            if notification.comment and notification.comment.content:
+                text_content = notification.comment.content
+            elif notification.issue.description:
+                text_content = notification.issue.description
+
+        elif notification.pullRequest:
+            facts.append({"title": "PR Number", "value": f"#{notification.pullRequest.number}"})
+            facts.append({"title": "PR Title", "value": notification.pullRequest.title})
+            subtitle = f"PR #{notification.pullRequest.number} - {notification.pullRequest.title}"
+
+            if notification.comment and notification.comment.content:
+                text_content = notification.comment.content
+            elif notification.pullRequest.description:
+                text_content = notification.pullRequest.description
+
+        text_content = truncate_text(text_content, max_length=500)
+
+        # Khởi tạo một mảng chứa các khối. Khối đầu tiên là TextBlock (Khối văn bản)
+        body_elements: list[dict[str, Any]] = [
+            {
+                "type": "TextBlock",
+                "text": title,  # Tiêu đề chính
+                "weight": "Bolder",  # Chữ in đậm
+                "size": "Medium",  # Chữ cỡ trung
+                "wrap": True,  # Tự động xuống dòng nếu tiêu đề quá dài (để tránh bị dấu ba chấm ...)
+                "color": "Attention",  # Màu đỏ,
+                "maxLines": 3,  # Số dòng tối đa hiển thị, nếu vượt quá sẽ bị ẩn đi và hiển thị dấu ba chấm ở cuối
+                "horizontalAlignment": "Left",
+            }
+        ]
+
+        if subtitle:
+            body_elements.append(
+                {
+                    "type": "TextBlock",
+                    "text": subtitle,  # Tiêu đề phụ
+                    "isSubtle": True,  # Hiển thị mờ hơn (để phân biệt với tiêu đề chính)
+                    "weight": "Lighter",  # Chữ mỏng hơn
+                    "spacing": "None",  # Nằm sát sạt ngay dưới tiêu đề chính, không bị khoảng trống rộng
+                    "wrap": True,  # Tự động xuống dòng nếu tiêu đề quá dài (để tránh bị dấu ba chấm ...)
+                    "color": "Warning",  # Màu Vàng/Cam
+                    "maxLines": 3,  # Số dòng tối đa hiển thị, nếu vượt quá sẽ bị ẩn đi và hiển thị dấu ba chấm ở cuối
+                    "horizontalAlignment": "Left",
+                }
+            )
+
+        # Bảng thông số
+        if facts:
+            # FactSet:
+            # - Tạo ra một cái bảng thông tin (key-value)
+            # - Nó sẽ tự động chia màn hình làm 2 cột: cột trái in đậm (Title) và cột phải in thường (Value) thẳng hàng tăm tắp
+            # Ví dụ:
+            #   Project: Backlog
+            #   Issue Key: BACK-123
+            #   Summary: Fix bug in login page
+            body_elements.append(
+                {
+                    "type": "FactSet",
+                    "facts": facts,
+                    "spacing": "Medium",
+                }
+            )
+
+        #  Nội dung tin nhắn
+        if text_content:
+            body_elements.append(
+                {
+                    "type": "TextBlock",
+                    "text": f"**Content:**\n\n{text_content}",
+                    "wrap": True,
+                    "spacing": "Medium",  # Tạo một khoảng cách vừa phải với bảng Facts phía trên
+                }
+            )
+
+        payload = {
+            "type": "message",
+            "attachments": [
+                {
+                    "contentType": "application/vnd.microsoft.card.adaptive",  # Khai báo với Teams đây là thẻ Adaptive
+                    "content": {
+                        "type": "AdaptiveCard",
+                        "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                        "version": "1.4",  # Phiên bản tính năng thẻ của Teams
+                        "body": body_elements,  # Toàn bộ nội dung phần trên: tiêu đề, bảng, nội dung
+                        "actions": [
+                            {
+                                "type": "Action.OpenUrl",  # Ra lệnh cho Teams vẽ ra một cái Nút bấm (Action Button)
+                                "title": "View in Backlog",
+                                "url": backlog_url,
+                            }
+                        ],
+                    },
+                }
+            ],
+        }
+        return payload
+
+    async def send_notification(self, notification: BacklogNotification) -> bool:
+        # Determine payload type based on webhook target URL
+        is_power_automate = (
+            "powerplatform.com" in self.webhook_url or "powerautomate" in self.webhook_url
+        )
+
+        if is_power_automate:
+            card_payload = self.build_adaptive_card_payload(notification)
+        else:
+            card_payload = self.build_message_card(notification)
+
+        logger.debug(
+            f"Sending card to Teams for notification ID {notification.id} (Format: {'AdaptiveCard' if is_power_automate else 'MessageCard'})"
+        )
 
         async with httpx.AsyncClient(timeout=10.0) as client:
             try:
                 response = await client.post(self.webhook_url, json=card_payload)
 
-                # Check for Teams webhook return code (usually returns '1' as text on success)
-                if response.status_code == 200:
+                # Check for Teams/PowerAutomate webhook return code (accept all 2xx success codes, like 200 OK or 202 Accepted)
+                if 200 <= response.status_code < 300:
                     logger.info(f"Successfully posted notification {notification.id} to Teams.")
                     return True
                 else:
