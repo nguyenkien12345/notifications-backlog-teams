@@ -69,10 +69,13 @@ class SyncService:
                 if success:
                     # Update state sequentially so if the next one fails, we don't lose progress
                     last_id = notification.id
+                    # Nếu bạn có 10 tin, gửi được 5 tin thành công, đến tin số 6 mạng đột ngột bị đứt sập nguồn. Nhờ có ghi log, hệ thống đã kịp lưu lại mốc tin số 5. Lượt sau mạng có lại, Bot sẽ chạy tiếp từ tin số 6, hoàn toàn không bị gửi lặp lại 5 tin đầu tiên lên Teams!
                     self.state_service.update_state(last_processed_id=last_id)
                     synced_count += 1
                 else:
                     # On failure, stop processing this batch to ensure we retry this notification next time
+                    # Nếu tin nhắn hiện tại gửi sang Teams bị lỗi (thất bại), Bot sẽ lập tức dừng vòng lặp for (bằng lệnh return) ngay lập tức, không gửi tiếp các tin phía sau nữa vì
+                    # khả năng cao các tin sau cũng sẽ lỗi. Bot dừng lại, ghi nhận ca làm việc này bị lỗi (increment_failure=True) để chờ 5 phút sau chạy lại, gửi lại đúng cái tin lỗi đó
                     logger.error(
                         f"Failed to deliver notification {notification.id} to Teams webhook. "
                         f"Aborting rest of the batch to retry on next run. Successfully synced in this run: {synced_count}."
