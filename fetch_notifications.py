@@ -45,11 +45,11 @@ async def fetch_recent_notifications(days=7):
 
             response = await client.get(url, params=params)
 
-            # Ý nghĩa của dòng: response.raise_for_status() 
+            # Ý nghĩa của dòng: response.raise_for_status()
             # - Trong trường hợp status code từ 200 đến 299, chương trình sẽ tiếp tục chạy bình thường
             # - Trong trường hợp status code từ 400 trở lên, chương trình sẽ dừng ngay lập tức và báo lỗi
             response.raise_for_status()
-            
+
             notifications = response.json()
 
             if not notifications:
@@ -104,8 +104,36 @@ async def main():
 
             # Extract content context
             title = ""
+            extra_info = ""
             if n.get("issue"):
-                title = f"Issue: {n['issue']['issueKey']} - {n['issue']['summary']}"
+                issue_data = n["issue"]
+
+                title = f"Issue: {issue_data['issueKey']} - {issue_data['summary']}"
+
+                created_by = issue_data.get("createdUser", {}).get("name", "N/A")
+
+                # Cắt bớt đuôi thời gian T...Z cho ngày tháng gọn gàng
+                start_date = issue_data.get("startDate", "N/A")
+                if start_date and "T" in start_date:
+                    start_date = start_date.split("T")[0]
+
+                due_date = issue_data.get("dueDate", "N/A")
+                if due_date and "T" in due_date:
+                    due_date = due_date.split("T")[0]
+
+                # Đếm số lượng người được tag trong bình luận này
+                tagged_count = (
+                    len(n.get("comment", {}).get("notifications", [])) if n.get("comment") else 0
+                )
+
+                # Gom thành chuỗi chữ để chuẩn bị in
+                extra_info = (
+                    f"    Created By: {created_by} | "
+                    f"Start Date: {start_date} | "
+                    f"Due Date: {due_date} | "
+                    f"People Tagged: {tagged_count}"
+                )
+
             elif n.get("pullRequest"):
                 title = f"PR #{n['pullRequest']['number']} - {n['pullRequest']['title']}"
             elif n.get("comment"):
@@ -117,6 +145,11 @@ async def main():
 
             print(f"{i:2d}. [{created}] [{read_status}] Sender: {sender}")
             print(f"    Topic: {title}")
+
+            # Nếu là Issue và có thông tin extra_info thì in hàng này ra
+            if extra_info:
+                print(extra_info)
+
             print(f"    Reason code: {reason}")
             print("-" * 80)
 
@@ -137,6 +170,7 @@ async def main():
 
         print("\n[Lỗi Chưa Xác Định] Có lỗi xảy ra khi thực thi:", file=sys.stderr)
         traceback.print_exc(file=sys.stderr)
+
 
 # __name__ là một biến đặc biệt (special variable) mà Python tự gán khi module được load. Giá trị của biến __name__ này sẽ thay đổi phụ thuộc vào cách bạn gọi file đó:
 # - Trường hợp 1: Bạn chủ động mở Terminal và gõ chạy trực tiếp file này: python script_kiem_tra.py
