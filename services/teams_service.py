@@ -1,4 +1,5 @@
 import logging
+import re
 from typing import Any
 
 import httpx
@@ -27,6 +28,49 @@ class TeamsService:
 
     def get_theme_color(self, reason: int) -> str:
         return THEME_COLORS.get(reason, DEFAULT_THEME_COLOR)
+
+    def parse_description_sections(self, description: str) -> dict[str, str]:
+        if not description:
+            return {}
+
+        description = description.replace("\r\n", "\n").replace("\r", "\n")
+
+        headers = {
+            "前提条件": ["前提条件", "再現の前提条件"],
+            "手順": ["手順", "再現手順"],
+            "結果": ["結果", "実際の結果", "再現結果"],
+            "期待する動作": ["期待する動作", "期待した結果", "期待した動作"],
+        }
+
+        flat_headers = []
+        header_to_key = {}
+        for key, aliases in headers.items():
+            for alias in aliases:
+                flat_headers.append(alias)
+                header_to_key[alias] = key
+
+        header_pattern = re.compile(
+            r"^(?P<prefix>#*)\s*(?P<name>"
+            + "|".join(re.escape(h) for h in flat_headers)
+            + r")\s*$",
+            re.MULTILINE,
+        )
+
+        matches = list(header_pattern.finditer(description))
+
+        result = {}
+        for idx, match in enumerate(matches):
+            alias_name = match.group("name")
+            key = header_to_key[alias_name]
+
+            start_pos = match.end()
+            end_pos = matches[idx + 1].start() if idx + 1 < len(matches) else len(description)
+            content = description[start_pos:end_pos].strip()
+
+            if key not in result or (not result[key] and content):
+                result[key] = content
+
+        return result
 
     def build_message_card(
         self, notification: BacklogNotification, comment_count: int | None = None
@@ -68,9 +112,18 @@ class TeamsService:
             subtitle = f"{notification.project.projectKey if notification.project else ''} - {notification.issue.issueKey}"
 
             if notification.comment and notification.comment.content:
-                text_content = notification.comment.content
+                text_content = truncate_text(notification.comment.content, max_length=500)
             elif notification.issue.description:
-                text_content = notification.issue.description
+                parsed_sections = self.parse_description_sections(notification.issue.description)
+                if parsed_sections:
+                    formatted_parts = []
+                    for title, content in parsed_sections.items():
+                        if content:
+                            truncated_content = truncate_text(content, max_length=500)
+                            formatted_parts.append(f"**{title}:**\n{truncated_content}")
+                    text_content = "\n\n".join(formatted_parts)
+                else:
+                    text_content = truncate_text(notification.issue.description, max_length=500)
 
         elif notification.pullRequest:
             facts.append({"name": "PR Number", "value": f"#{notification.pullRequest.number}"})
@@ -78,11 +131,9 @@ class TeamsService:
             subtitle = f"PR #{notification.pullRequest.number} - {notification.pullRequest.title}"
 
             if notification.comment and notification.comment.content:
-                text_content = notification.comment.content
+                text_content = truncate_text(notification.comment.content, max_length=500)
             elif notification.pullRequest.description:
-                text_content = notification.pullRequest.description
-
-        text_content = truncate_text(text_content, max_length=500)
+                text_content = truncate_text(notification.pullRequest.description, max_length=500)
 
         section: dict[str, Any] = {
             "activityTitle": title,
@@ -149,9 +200,18 @@ class TeamsService:
             subtitle = f"{notification.project.projectKey if notification.project else ''} - {notification.issue.issueKey}"
 
             if notification.comment and notification.comment.content:
-                text_content = notification.comment.content
+                text_content = truncate_text(notification.comment.content, max_length=500)
             elif notification.issue.description:
-                text_content = notification.issue.description
+                parsed_sections = self.parse_description_sections(notification.issue.description)
+                if parsed_sections:
+                    formatted_parts = []
+                    for title, content in parsed_sections.items():
+                        if content:
+                            truncated_content = truncate_text(content, max_length=500)
+                            formatted_parts.append(f"**{title}:**\n{truncated_content}")
+                    text_content = "\n\n".join(formatted_parts)
+                else:
+                    text_content = truncate_text(notification.issue.description, max_length=500)
 
         elif notification.pullRequest:
             facts.append({"title": "PR Number", "value": f"#{notification.pullRequest.number}"})
@@ -159,11 +219,9 @@ class TeamsService:
             subtitle = f"PR #{notification.pullRequest.number} - {notification.pullRequest.title}"
 
             if notification.comment and notification.comment.content:
-                text_content = notification.comment.content
+                text_content = truncate_text(notification.comment.content, max_length=500)
             elif notification.pullRequest.description:
-                text_content = notification.pullRequest.description
-
-        text_content = truncate_text(text_content, max_length=500)
+                text_content = truncate_text(notification.pullRequest.description, max_length=500)
 
         body_elements: list[dict[str, Any]] = [
             {
