@@ -1,12 +1,4 @@
-# ==============================================================================
-# Định dạng .toml là gì ?
-# - Rất dễ đọc đối với con người (nhìn phát hiểu ngay cặp Key = Value)
-# - Rất dễ phân tích đối với máy tính
-# ==============================================================================
-
 [tool.pyrefly]
-# - venv/bin/python: Đường dẫn tới Python interpreter nằm bên trong Môi trường ảo (Virtual Environment - venv) cục bộ của dự án
-# - Nói với Pyrefly rằng hãy dùng chính xác cục chạy Python nằm trong thư mục venv này vì tất cả thư viện như fastapi, pydantic hay httpx đều cài biệt lập trong thư mục venv này rồi!
 python-interpreter-path = "venv/bin/python"
 
 [tool.ruff]
