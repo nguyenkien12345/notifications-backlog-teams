@@ -39,6 +39,14 @@ router = APIRouter()
 # Giải thích ý nghĩa của option include_in_schema=False (Giấu API khỏi trang tài liệu)
 # Có những API bạn chỉ muốn dùng nội bộ, hoặc dùng để test ngầm và không muốn bất kỳ ai nhìn thấy nó trên trang tài liệu hướng dẫn công khai
 
+# - !s có nghĩa là: Hãy tự động gọi hàm str() lên cái biến này cho tôi. Do đó, {e!s} cũng tương đương với {str(e)}
+
+# - Thêm cụm từ from e vào sau lệnh raise HTTPException. Đây là kỹ thuật Exception Chaining (Liên kết chuỗi lỗi).
+# - Khi bạn đang ở trong khối except Exception as e, nghĩa là một lỗi gốc nào đó đã xảy ra (ví dụ: đứt mạng Backlog). Bạn lại tiếp tục ném ra (raise) một lỗi mới là HTTPException để FastAPI trả về giao diện.
+# - Nếu không có from e Python sẽ cắt đứt mối liên hệ giữa lỗi gốc (đứt mạng) và lỗi mới (HTTPException). Nhật ký hệ thống (Traceback) lúc này có thể bị mất dấu vết hoặc hiển thị dòng chữ rất khó chịu: "During handling of the above exception, another exception occurred...".
+# Khi bạn cần debug tìm nguyên nhân gốc rễ vì sao đồng bộ thất bại, bạn sẽ gặp rất nhiều khó khăn vì thông tin lỗi gốc đã bị che mờ.
+# - Khi có from e Bạn đang nói với Python rằng: "Cái lỗi HTTPException này sinh ra là do cái lỗi gốc e này gây ra đấy nhé!". Python sẽ xâu chuỗi 2 lỗi này lại với nhau. Khi hệ thống in ra màn hình log, nó sẽ hiển thị một dòng lịch sử lỗi mạch lạc từ nguyên nhân đầu tiên (Gốc) cho đến ngọn, giúp lập trình viên vào xem log là "bắt đúng bệnh" ngay lập tức mà không cần phải đoán mò.
+
 
 class SyncResponse(BaseModel):
     status: str
@@ -94,12 +102,3 @@ async def get_status():
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to load status: {e!s}",
         ) from e
-
-
-# - !s có nghĩa là: Hãy tự động gọi hàm str() lên cái biến này cho tôi. Do đó, {e!s} cũng tương đương với {str(e)}
-
-# - Thêm cụm từ from e vào sau lệnh raise HTTPException. Đây là kỹ thuật Exception Chaining (Liên kết chuỗi lỗi).
-# - Khi bạn đang ở trong khối except Exception as e, nghĩa là một lỗi gốc nào đó đã xảy ra (ví dụ: đứt mạng Backlog). Bạn lại tiếp tục ném ra (raise) một lỗi mới là HTTPException để FastAPI trả về giao diện.
-# - Nếu không có from e Python sẽ cắt đứt mối liên hệ giữa lỗi gốc (đứt mạng) và lỗi mới (HTTPException). Nhật ký hệ thống (Traceback) lúc này có thể bị mất dấu vết hoặc hiển thị dòng chữ rất khó chịu: "During handling of the above exception, another exception occurred...".
-# Khi bạn cần debug tìm nguyên nhân gốc rễ vì sao đồng bộ thất bại, bạn sẽ gặp rất nhiều khó khăn vì thông tin lỗi gốc đã bị che mờ.
-# - Khi có from e Bạn đang nói với Python rằng: "Cái lỗi HTTPException này sinh ra là do cái lỗi gốc e này gây ra đấy nhé!". Python sẽ xâu chuỗi 2 lỗi này lại với nhau. Khi hệ thống in ra màn hình log, nó sẽ hiển thị một dòng lịch sử lỗi mạch lạc từ nguyên nhân đầu tiên (Gốc) cho đến ngọn, giúp lập trình viên vào xem log là "bắt đúng bệnh" ngay lập tức mà không cần phải đoán mò.

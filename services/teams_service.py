@@ -1,4 +1,5 @@
 import logging
+import re
 from typing import Any
 
 import httpx
@@ -26,8 +27,50 @@ class TeamsService:
         )
 
     def get_theme_color(self, reason: int) -> str:
-        # - Nếu tìm thấy, nó lấy màu đó ra. Nếu không tìm thấy, nó sẽ tự động lấy màu mặc định (DEFAULT_THEME_COLOR)
         return THEME_COLORS.get(reason, DEFAULT_THEME_COLOR)
+
+    def parse_description_sections(self, description: str) -> dict[str, str]:
+        if not description:
+            return {}
+
+        description = description.replace("\r\n", "\n").replace("\r", "\n")
+
+        headers = {
+            "前提条件": ["前提条件", "再現の前提条件"],
+            "手順": ["手順", "再現手順"],
+            "結果": ["結果", "実際の結果", "再現結果"],
+            "期待する動作": ["期待する動作", "期待した結果", "期待した動作"],
+        }
+
+        flat_headers = []
+        header_to_key = {}
+        for key, aliases in headers.items():
+            for alias in aliases:
+                flat_headers.append(alias)
+                header_to_key[alias] = key
+
+        header_pattern = re.compile(
+            r"^(?P<prefix>#*)\s*(?P<name>"
+            + "|".join(re.escape(h) for h in flat_headers)
+            + r")\s*$",
+            re.MULTILINE,
+        )
+
+        matches = list(header_pattern.finditer(description))
+
+        result = {}
+        for idx, match in enumerate(matches):
+            alias_name = match.group("name")
+            key = header_to_key[alias_name]
+
+            start_pos = match.end()
+            end_pos = matches[idx + 1].start() if idx + 1 < len(matches) else len(description)
+            content = description[start_pos:end_pos].strip()
+
+            if key not in result or (not result[key] and content):
+                result[key] = content
+
+        return result
 
     def build_message_card(
         self, notification: BacklogNotification, comment_count: int | None = None
@@ -36,18 +79,14 @@ class TeamsService:
         reason_desc = notification.get_reason_description()
         sender_name = notification.sender.name if notification.sender else "Someone"
 
-        # - Build notification title from action emoji, sender name and action description
         title = f"{emoji} {sender_name} {reason_desc}"
 
-        # - Lấy mã màu chủ đề của card và lấy đường link chi tiết dẫn đến Backlog
         theme_color = self.get_theme_color(notification.reason)
         backlog_url = self.get_backlog_url(notification)
 
-        # - Một thông báo trên Backlog có thể xuất phát từ một Công việc (Issue) hoặc một Yêu cầu duyệt code (Pull Request)
-        # - Khởi tạo 3 biến: facts, text_content, và subtitle
-        facts = []  # Danh sách thông số phụ (facts)
-        text_content = ""  # Nội dung tin nhắn (text_content)
-        subtitle = ""  # Tiêu đề phụ (subtitle)
+        facts = []
+        text_content = ""
+        subtitle = ""
 
         if notification.project:
             facts.append(
@@ -55,12 +94,10 @@ class TeamsService:
             )
             subtitle = notification.project.name
 
-        # + TRƯỜNG HỢP 1: NẾU LÀ CÔNG VIỆC (ISSUE)
         if notification.issue:
             facts.append({"name": "Issue Key", "value": notification.issue.issueKey})
             facts.append({"name": "Summary", "value": notification.issue.summary})
 
-            # Additional details for issue creator, comments, status, assignee, priority
             if notification.issue.createdUser:
                 facts.append({"name": "Created By", "value": notification.issue.createdUser.name})
             if notification.issue.assignee:
@@ -74,27 +111,30 @@ class TeamsService:
 
             subtitle = f"{notification.project.projectKey if notification.project else ''} - {notification.issue.issueKey}"
 
-            # Chọn nội dung hiển thị: Ưu tiên nội dung bình luận, nếu không có thì lấy mô tả công việc
             if notification.comment and notification.comment.content:
-                text_content = notification.comment.content
+                text_content = truncate_text(notification.comment.content, max_length=500)
             elif notification.issue.description:
-                text_content = notification.issue.description
+                parsed_sections = self.parse_description_sections(notification.issue.description)
+                if parsed_sections:
+                    formatted_parts = []
+                    for title, content in parsed_sections.items():
+                        if content:
+                            truncated_content = truncate_text(content, max_length=500)
+                            formatted_parts.append(f"**{title}:**\n{truncated_content}")
+                    text_content = "\n\n".join(formatted_parts)
+                else:
+                    text_content = truncate_text(notification.issue.description, max_length=500)
 
-        # + TRƯỜNG HỢP 2: NẾU LÀ YÊU CẦU DUYỆT CODE (PULL REQUEST)
         elif notification.pullRequest:
             facts.append({"name": "PR Number", "value": f"#{notification.pullRequest.number}"})
             facts.append({"name": "PR Title", "value": notification.pullRequest.title})
             subtitle = f"PR #{notification.pullRequest.number} - {notification.pullRequest.title}"
 
             if notification.comment and notification.comment.content:
-                text_content = notification.comment.content
+                text_content = truncate_text(notification.comment.content, max_length=500)
             elif notification.pullRequest.description:
-                text_content = notification.pullRequest.description
+                text_content = truncate_text(notification.pullRequest.description, max_length=500)
 
-        # Truncate content if it's too long
-        text_content = truncate_text(text_content, max_length=500)
-
-        # - Tạo một phân đoạn (section) chứa toàn bộ tiêu đề, tiêu đề phụ, bảng thông số facts và nội dung chữ text_content vừa tính toán được ở trên
         section: dict[str, Any] = {
             "activityTitle": title,
             "activitySubtitle": subtitle,
@@ -105,7 +145,6 @@ class TeamsService:
         if text_content:
             section["text"] = f"**Content:**\n\n{text_content}"
 
-        # - Gom toàn bộ thông tin vào một cục Dictionary lớn đặt tên là card
         # - potentialAction: Ra lệnh cho Teams vẽ ra một cái Nút bấm (Action Button) tên là "View in Backlog". Khi người dùng trên Teams click vào nút này, trình duyệt sẽ tự động mở ra đường link backlog_url dẫn thẳng tới trang công việc đó
         card = {
             "@type": "MessageCard",
@@ -131,17 +170,13 @@ class TeamsService:
         reason_desc = notification.get_reason_description()
         sender_name = notification.sender.name if notification.sender else "Someone"
 
-        # - Build notification title from action emoji, sender name and action description
         title = f"{emoji} {sender_name} {reason_desc}"
 
-        # - Lấy đường link chi tiết dẫn đến Backlog
         backlog_url = self.get_backlog_url(notification)
 
-        # - Một thông báo trên Backlog có thể xuất phát từ một Công việc (Issue) hoặc một Yêu cầu duyệt code (Pull Request)
-        # - Khởi tạo 3 biến: facts, text_content, và subtitle
-        facts = []  # Danh sách thông số phụ (facts)
-        subtitle = ""  # Tiêu đề phụ (subtitle)
-        text_content = ""  # Nội dung tin nhắn (text_content)
+        facts = []
+        subtitle = ""
+        text_content = ""
 
         if notification.project:
             facts.append({"title": "Project", "value": notification.project.name})
@@ -151,7 +186,6 @@ class TeamsService:
             facts.append({"title": "Issue Key", "value": notification.issue.issueKey})
             facts.append({"title": "Summary", "value": notification.issue.summary})
 
-            # Additional details for issue creator, comments, status, assignee, priority
             if notification.issue.createdUser:
                 facts.append({"title": "Created By", "value": notification.issue.createdUser.name})
             if notification.issue.assignee:
@@ -166,9 +200,18 @@ class TeamsService:
             subtitle = f"{notification.project.projectKey if notification.project else ''} - {notification.issue.issueKey}"
 
             if notification.comment and notification.comment.content:
-                text_content = notification.comment.content
+                text_content = truncate_text(notification.comment.content, max_length=500)
             elif notification.issue.description:
-                text_content = notification.issue.description
+                parsed_sections = self.parse_description_sections(notification.issue.description)
+                if parsed_sections:
+                    formatted_parts = []
+                    for title, content in parsed_sections.items():
+                        if content:
+                            truncated_content = truncate_text(content, max_length=500)
+                            formatted_parts.append(f"**{title}:**\n{truncated_content}")
+                    text_content = "\n\n".join(formatted_parts)
+                else:
+                    text_content = truncate_text(notification.issue.description, max_length=500)
 
         elif notification.pullRequest:
             facts.append({"title": "PR Number", "value": f"#{notification.pullRequest.number}"})
@@ -176,13 +219,10 @@ class TeamsService:
             subtitle = f"PR #{notification.pullRequest.number} - {notification.pullRequest.title}"
 
             if notification.comment and notification.comment.content:
-                text_content = notification.comment.content
+                text_content = truncate_text(notification.comment.content, max_length=500)
             elif notification.pullRequest.description:
-                text_content = notification.pullRequest.description
+                text_content = truncate_text(notification.pullRequest.description, max_length=500)
 
-        text_content = truncate_text(text_content, max_length=500)
-
-        # Khởi tạo một mảng chứa các khối. Khối đầu tiên là TextBlock (Khối văn bản)
         body_elements: list[dict[str, Any]] = [
             {
                 "type": "TextBlock",
@@ -263,7 +303,6 @@ class TeamsService:
         return payload
 
     async def send_notification(self, notification: BacklogNotification) -> bool:
-        # Determine payload type based on webhook target URL
         is_power_automate = (
             "powerplatform.com" in self.webhook_url or "powerautomate" in self.webhook_url
         )
@@ -295,7 +334,6 @@ class TeamsService:
             try:
                 response = await client.post(self.webhook_url, json=card_payload)
 
-                # Check for Teams/PowerAutomate webhook return code (accept all 2xx success codes, like 200 OK or 202 Accepted)
                 if 200 <= response.status_code < 300:
                     logger.info(f"Successfully posted notification {notification.id} to Teams.")
                     return True
