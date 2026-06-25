@@ -35,12 +35,9 @@ logger = logging.getLogger("backlog_service")
 
 class BacklogService:
     def __init__(self):
-        # Build base URL dynamically based on space ID and domain configuration
         space_id = settings.BACKLOG_SPACE_ID
         domain = settings.BACKLOG_DOMAIN
 
-        # Khởi tạo các thuộc tính dùng chung cho toàn bộ instance BacklogService
-        # Các thuộc tính này sẽ được tái sử dụng ở các method khác mà không cần đọc lại config (Ở đây chính là base_url và api_key)
         if "." in space_id:
             self.base_url = f"https://{space_id}/api/v2"
         else:
@@ -98,9 +95,9 @@ class BacklogService:
 
                 notifications = [BacklogNotification(**n) for n in raw_notifications]
 
-                # Tiến hành sắp xếp (sort) lại danh sách thông báo theo thứ tự tăng dần của trường id (thông báo nào có ID nhỏ hơn tức là xảy ra trước sẽ được xếp lên đầu)
+                # Tiến hành sắp xếp (sort) lại danh sách thông báo theo thứ tự giảm dần của trường id (thông báo nào có ID lớn hơn tức là mới nhất sẽ được xếp lên đầu)
                 # Bonus thêm: Nếu muốn sắp xếp gỉam dần thì thêm option reverse=True vào. VD: notifications.sort(key=lambda x: x.id, reverse=True)
-                notifications.sort(key=lambda x: x.id)
+                notifications.sort(key=lambda x: x.id, reverse=True)
                 return notifications
 
             except httpx.HTTPStatusError as hse:

@@ -48,15 +48,21 @@ class SyncService:
                 logger.info(
                     "New notifications exist but none matched the unread/processing criteria."
                 )
-                # Trường hợp có tin mới (ví dụ có 5 tin), nhưng cả 5 tin này đều đã bị người dùng đọc mất rồi, khiến danh sách to_process trống rỗng.
-                # Lúc này Bot sẽ tìm đến thông báo cuối cùng nằm ở cuối danh sách thô (notifications[-1]), lấy cái ID cao nhất của nó (highest_id) để cập nhật đè vào sổ. Mục đích là để lượt chạy sau Bot không phải quét lại 5 tin đã đọc này nữa.
-                highest_id = notifications[-1].id
+                # Trường hợp có tin mới, nhưng đều không thỏa mãn tiêu chí xử lý.
+                # Lấy ID cao nhất trong danh sách để cập nhật trạng thái làm mốc.
+                highest_id = max(n.id for n in notifications)
                 self.state_service.update_state(
                     last_processed_id=highest_id,
                     last_sync_time=current_time,
                     increment_success=True,
                 )
                 return 0
+
+            # Sắp xếp lại danh sách cần xử lý theo thứ tự ID tăng dần (cũ trước, mới sau)
+            # Việc này đảm bảo:
+            # 1. Các thông báo được đẩy lên Teams theo đúng thứ tự thời gian (tin mới nhất hiển thị cuối cùng trong kênh chat)
+            # 2. Cập nhật last_processed_id tăng dần giúp tránh bỏ sót tin khi xảy ra lỗi giữa chừng
+            to_process.sort(key=lambda x: x.id)
 
             logger.info(f"Found {len(to_process)} new notifications to sync.")
             synced_count = 0
