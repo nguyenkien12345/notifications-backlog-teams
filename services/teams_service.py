@@ -26,7 +26,6 @@ class TeamsService:
         )
 
     def get_theme_color(self, reason: int) -> str:
-        # - Nếu tìm thấy, nó lấy màu đó ra. Nếu không tìm thấy, nó sẽ tự động lấy màu mặc định (DEFAULT_THEME_COLOR)
         return THEME_COLORS.get(reason, DEFAULT_THEME_COLOR)
 
     def build_message_card(
@@ -36,18 +35,14 @@ class TeamsService:
         reason_desc = notification.get_reason_description()
         sender_name = notification.sender.name if notification.sender else "Someone"
 
-        # - Build notification title from action emoji, sender name and action description
         title = f"{emoji} {sender_name} {reason_desc}"
 
-        # - Lấy mã màu chủ đề của card và lấy đường link chi tiết dẫn đến Backlog
         theme_color = self.get_theme_color(notification.reason)
         backlog_url = self.get_backlog_url(notification)
 
-        # - Một thông báo trên Backlog có thể xuất phát từ một Công việc (Issue) hoặc một Yêu cầu duyệt code (Pull Request)
-        # - Khởi tạo 3 biến: facts, text_content, và subtitle
-        facts = []  # Danh sách thông số phụ (facts)
-        text_content = ""  # Nội dung tin nhắn (text_content)
-        subtitle = ""  # Tiêu đề phụ (subtitle)
+        facts = []
+        text_content = ""
+        subtitle = ""
 
         if notification.project:
             facts.append(
@@ -55,12 +50,10 @@ class TeamsService:
             )
             subtitle = notification.project.name
 
-        # + TRƯỜNG HỢP 1: NẾU LÀ CÔNG VIỆC (ISSUE)
         if notification.issue:
             facts.append({"name": "Issue Key", "value": notification.issue.issueKey})
             facts.append({"name": "Summary", "value": notification.issue.summary})
 
-            # Additional details for issue creator, comments, status, assignee, priority
             if notification.issue.createdUser:
                 facts.append({"name": "Created By", "value": notification.issue.createdUser.name})
             if notification.issue.assignee:
@@ -74,13 +67,11 @@ class TeamsService:
 
             subtitle = f"{notification.project.projectKey if notification.project else ''} - {notification.issue.issueKey}"
 
-            # Chọn nội dung hiển thị: Ưu tiên nội dung bình luận, nếu không có thì lấy mô tả công việc
             if notification.comment and notification.comment.content:
                 text_content = notification.comment.content
             elif notification.issue.description:
                 text_content = notification.issue.description
 
-        # + TRƯỜNG HỢP 2: NẾU LÀ YÊU CẦU DUYỆT CODE (PULL REQUEST)
         elif notification.pullRequest:
             facts.append({"name": "PR Number", "value": f"#{notification.pullRequest.number}"})
             facts.append({"name": "PR Title", "value": notification.pullRequest.title})
@@ -91,10 +82,8 @@ class TeamsService:
             elif notification.pullRequest.description:
                 text_content = notification.pullRequest.description
 
-        # Truncate content if it's too long
         text_content = truncate_text(text_content, max_length=500)
 
-        # - Tạo một phân đoạn (section) chứa toàn bộ tiêu đề, tiêu đề phụ, bảng thông số facts và nội dung chữ text_content vừa tính toán được ở trên
         section: dict[str, Any] = {
             "activityTitle": title,
             "activitySubtitle": subtitle,
@@ -105,7 +94,6 @@ class TeamsService:
         if text_content:
             section["text"] = f"**Content:**\n\n{text_content}"
 
-        # - Gom toàn bộ thông tin vào một cục Dictionary lớn đặt tên là card
         # - potentialAction: Ra lệnh cho Teams vẽ ra một cái Nút bấm (Action Button) tên là "View in Backlog". Khi người dùng trên Teams click vào nút này, trình duyệt sẽ tự động mở ra đường link backlog_url dẫn thẳng tới trang công việc đó
         card = {
             "@type": "MessageCard",
@@ -131,17 +119,13 @@ class TeamsService:
         reason_desc = notification.get_reason_description()
         sender_name = notification.sender.name if notification.sender else "Someone"
 
-        # - Build notification title from action emoji, sender name and action description
         title = f"{emoji} {sender_name} {reason_desc}"
 
-        # - Lấy đường link chi tiết dẫn đến Backlog
         backlog_url = self.get_backlog_url(notification)
 
-        # - Một thông báo trên Backlog có thể xuất phát từ một Công việc (Issue) hoặc một Yêu cầu duyệt code (Pull Request)
-        # - Khởi tạo 3 biến: facts, text_content, và subtitle
-        facts = []  # Danh sách thông số phụ (facts)
-        subtitle = ""  # Tiêu đề phụ (subtitle)
-        text_content = ""  # Nội dung tin nhắn (text_content)
+        facts = []
+        subtitle = ""
+        text_content = ""
 
         if notification.project:
             facts.append({"title": "Project", "value": notification.project.name})
@@ -151,7 +135,6 @@ class TeamsService:
             facts.append({"title": "Issue Key", "value": notification.issue.issueKey})
             facts.append({"title": "Summary", "value": notification.issue.summary})
 
-            # Additional details for issue creator, comments, status, assignee, priority
             if notification.issue.createdUser:
                 facts.append({"title": "Created By", "value": notification.issue.createdUser.name})
             if notification.issue.assignee:
@@ -182,7 +165,6 @@ class TeamsService:
 
         text_content = truncate_text(text_content, max_length=500)
 
-        # Khởi tạo một mảng chứa các khối. Khối đầu tiên là TextBlock (Khối văn bản)
         body_elements: list[dict[str, Any]] = [
             {
                 "type": "TextBlock",
@@ -263,7 +245,6 @@ class TeamsService:
         return payload
 
     async def send_notification(self, notification: BacklogNotification) -> bool:
-        # Determine payload type based on webhook target URL
         is_power_automate = (
             "powerplatform.com" in self.webhook_url or "powerautomate" in self.webhook_url
         )
@@ -295,7 +276,6 @@ class TeamsService:
             try:
                 response = await client.post(self.webhook_url, json=card_payload)
 
-                # Check for Teams/PowerAutomate webhook return code (accept all 2xx success codes, like 200 OK or 202 Accepted)
                 if 200 <= response.status_code < 300:
                     logger.info(f"Successfully posted notification {notification.id} to Teams.")
                     return True
