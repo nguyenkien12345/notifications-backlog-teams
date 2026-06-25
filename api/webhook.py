@@ -47,6 +47,7 @@ router = APIRouter()
 # Khi bạn cần debug tìm nguyên nhân gốc rễ vì sao đồng bộ thất bại, bạn sẽ gặp rất nhiều khó khăn vì thông tin lỗi gốc đã bị che mờ.
 # - Khi có from e Bạn đang nói với Python rằng: "Cái lỗi HTTPException này sinh ra là do cái lỗi gốc e này gây ra đấy nhé!". Python sẽ xâu chuỗi 2 lỗi này lại với nhau. Khi hệ thống in ra màn hình log, nó sẽ hiển thị một dòng lịch sử lỗi mạch lạc từ nguyên nhân đầu tiên (Gốc) cho đến ngọn, giúp lập trình viên vào xem log là "bắt đúng bệnh" ngay lập tức mà không cần phải đoán mò.
 
+
 class SyncResponse(BaseModel):
     status: str
     message: str
