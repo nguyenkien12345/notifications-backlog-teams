@@ -7,6 +7,7 @@ from models.backlog import BacklogNotification
 
 logger = logging.getLogger("backlog_service")
 
+
 class BacklogService:
     def __init__(self):
         space_id = settings.BACKLOG_SPACE_ID
@@ -21,8 +22,7 @@ class BacklogService:
 
     async def fetch_notifications(
         self,
-        min_id: int
-        | None = None,
+        min_id: int | None = None,
         count: int = 50,
     ) -> list[BacklogNotification]:
         url = f"{self.base_url}/notifications"
