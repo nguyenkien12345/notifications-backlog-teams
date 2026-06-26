@@ -165,9 +165,9 @@ class TeamsService:
             # ### 結果
             # |
             # Con trỏ đứng ở đây.
-            start_pos = match.end() # Trả về vị trí ngay sau header
+            start_pos = match.end() # Vị trí kết thúc của Header hiện tại (bắt đầu phần nội dung bên dưới nó)
 
-            # start() nghĩa là: vị trí bắt đầu của header tiếp theo
+            # start() nghĩa là: vị trí bắt đầu của header tiếp theo. Nếu là Header cuối cùng, lấy đến hết chuỗi.
             # Ví dụ:
             # ### 期待する動作
             # No error
