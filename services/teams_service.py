@@ -33,7 +33,22 @@ class TeamsService:
         if not description:
             return {}
 
+        # Chuẩn hóa toàn bộ ký tự xuống dòng từ các hệ điều hành khác nhau về định dạng \n
         description = description.replace("\r\n", "\n").replace("\r", "\n")
+
+        # - Định nghĩa danh sách các tiêu đề (section header) có thể xuất hiện trong phần mô tả.
+        # - Key của dictionary là tên section chuẩn mà hệ thống sẽ sử dụng trong kết quả trả về.
+        # - Value là danh sách các biến thể (alias) của cùng một section do người dùng có thể nhập
+        # theo nhiều cách khác nhau trong ticket.
+        #
+        # Ví dụ:
+        # - "手順" và "再現手順" đều mang ý nghĩa là các bước tái hiện lỗi (Steps to Reproduce),
+        #   nên sẽ được quy về cùng một key chuẩn là "手順".
+        # - "結果", "実際の結果" và "再現結果" đều mô tả kết quả thực tế khi thực hiện thao tác,
+        #   nên sẽ được quy về key chuẩn là "結果".
+        #
+        # Việc chuẩn hóa này giúp parser có thể nhận diện và xử lý được nhiều định dạng ticket khác nhau
+        # nhưng vẫn trả về cấu trúc dữ liệu thống nhất để các bước xử lý phía sau sử dụng.
 
         headers = {
             "前提条件": ["前提条件", "再現の前提条件"],
@@ -45,10 +60,43 @@ class TeamsService:
         flat_headers = []
         header_to_key = {}
         for key, aliases in headers.items():
+            # key = "前提条件"
+            # aliases = ["前提条件", "再現の前提条件"]
             for alias in aliases:
                 flat_headers.append(alias)
                 header_to_key[alias] = key
 
+        # Output:
+        # flat_headers = ["前提条件", "再現の前提条件", "手順", "再現手順", "結果", "実際の結果", "再現結果", "期待する動作", "期待した結果", "期待した動作"]
+
+        # header_to_key = [
+        #   "前提条件": "前提条件",
+        #   "再現の前提条件": "前提条件",
+
+        #   "手順": "手順",
+        #   "再現手順": "手順",
+
+        #   "結果": "結果",
+        #   "実際の結果": "結果",
+        #   "再現結果": "結果",
+
+        #   "期待する動作": "期待する動作",
+        #   "期待した結果": "期待する動作",
+        #   "期待した動作": "期待する動作",
+        # ]
+
+        # re.compile: Tìm tất cả các tiêu đề section
+        # compile dùng để: Regex string => Biên dịch thành Regex Object => Dùng đi dùng lại nhiều lần
+        # + ^: Bắt đầu dòng
+        # + (?P<prefix>#*): Đây là một Named Group được đặt tên là prefix. Lưu phần match được vào biến tên prefix. VD: ### 結果 thì match.group("prefix") sẽ trả ra chuỗi là "###"
+        # + #*: 0 hoặc nhiều ký tự #. Sử dụng dấu # để parse được markdown. Nếu không có #* thì regex sẽ không nhận diện được các header markdown. VD: #, ##, ###, ####, thậm chí là rỗng
+        # + \s*: 0 hoặc nhiều ký tự khoảng trắng. VD: "", " ", "   ", "\t"
+        # + ?P<name>: Đây là một Named Group được đặt tên là name. Lưu phần match được vào biến tên name. VD: ### 結果 thì match.group("name") sẽ trả ra chuỗi là "結果"
+        # + Bên trong group name: "|".join(re.escape(h) for h in flat_headers). VD: flat_headers = ["前提条件", "手順", "結果"] thì sinh ra "|".join => "前提条件|手順|結果"
+        # + (?P<name>前提条件|手順|結果) => Match vào tên header => Match một trong các giá trị sau: 前提条件 hoặc 手順 hoặc 結果
+        # + \s*$: Cho phép khoảng trắng cuối dòng rồi kết thúc dòng
+        # + re.MULTILINE: Nếu không có re.MULTILINE thì chỉ áp dụng cho: đầu toàn bộ chuỗi và cuối toàn bộ chuỗi. Có re.MULTILINE thì áp dụng cho: đầu mỗi dòng và cuối mỗi dòng
+        
         header_pattern = re.compile(
             r"^(?P<prefix>#*)\s*(?P<name>"
             + "|".join(re.escape(h) for h in flat_headers)
@@ -56,17 +104,80 @@ class TeamsService:
             re.MULTILINE,
         )
 
+        # Ví dụ thực tế
+        # Description:
+
+        # # 前提条件
+        # # Windows 11
+
+        # ## 手順
+        # Open Chrome
+
+        # ### 結果
+        # Error happens
+
+        # ### 期待する動作
+        # No error
+
+        # Regex sẽ tìm được 4 match.
+
+        # Match 1
+        # # 前提条件
+        # Groups:
+        # prefix = "#"
+        # name = "前提条件"
+
+        # Match 2
+        # ## 手順
+        # Groups:
+        # prefix = "##"
+        # name = "手順"
+
+        # Match 3
+        # ### 結果
+        # Groups:
+        # prefix = "###"
+        # name = "結果"
+
+        # Match 4
+        # ### 期待する動作
+        # Groups:
+        # prefix = "###"
+        # name = "期待する動作"
+        
+        # Sau khi chạy matches = list(header_pattern.finditer(description)) ta sẽ có 4 match:
+        # Match 0: # 前提条件
+        # Match 1: ## 手順
+        # Match 2: ### 結果
+        # Match 3: ### 期待する動作
+        # finditer() trả về Iterator[Match]
         matches = list(header_pattern.finditer(description))
 
         result = {}
+
+        # Vòng lặp tự động đếm số thứ tự tăng dần từ 1, 2, 3... giúp bạn biết chính xác có tổng cộng bao nhiêu item
         for idx, match in enumerate(matches):
+            # VD: match là ### 結果 thì alias_name sẽ là 結果, key sẽ là 結果
             alias_name = match.group("name")
             key = header_to_key[alias_name]
 
-            start_pos = match.end()
-            end_pos = matches[idx + 1].start() if idx + 1 < len(matches) else len(description)
-            content = description[start_pos:end_pos].strip()
+            # Ví dụ:
+            # ### 結果
+            # |
+            # Con trỏ đứng ở đây.
+            start_pos = match.end() # Trả về vị trí ngay sau header
 
+            # start() nghĩa là: vị trí bắt đầu của header tiếp theo
+            # Ví dụ:
+            # ### 期待する動作
+            # No error
+            # ^
+            # Con trỏ đứng tại đây.
+            end_pos = matches[idx + 1].start() if idx + 1 < len(matches) else len(description)
+
+            content = description[start_pos:end_pos].strip() # Đây là slicing string. Cắt từ start_pos đến trước end_pos. Kết quả là No error. strip sẽ xoá space, tab, newline ở đầu cuối
+
+            # Chỉ lưu section lần đầu tiên, hoặc thay thế nếu giá trị cũ đang rỗng còn giá trị mới có nội dung.
             if key not in result or (not result[key] and content):
                 result[key] = content
 
