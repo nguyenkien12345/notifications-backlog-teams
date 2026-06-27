@@ -23,7 +23,7 @@ class BacklogService:
     async def fetch_notifications(
         self,
         min_id: int | None = None,
-        count: int = 50,
+        count: int = 3,
     ) -> list[BacklogNotification]:
         url = f"{self.base_url}/notifications"
         params = {"apiKey": self.api_key, "count": count}
