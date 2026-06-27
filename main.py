@@ -1,3 +1,10 @@
+import os
+import sys
+
+# Nếu chạy dưới dạng file đóng gói (PyInstaller), tự động chuyển thư mục làm việc (CWD) về thư mục chứa file chạy
+if getattr(sys, 'frozen', False):
+    os.chdir(os.path.dirname(sys.executable))
+
 import logging
 from contextlib import asynccontextmanager
 
