@@ -7,12 +7,13 @@
 
 # .PHONY: Phần định nghĩa phím tắt chung. Đây là một từ khóa đặc biệt của Makefile. 
 # Nó dùng để thông báo rằng: "Những chữ nằm phía sau (help, install, lint, format, check) chỉ là tên của các phím tắt lệnh, chứ không phải là tên của một file hay thư mục nào trong máy tính đâu nhé
-.PHONY: help install lint format check run
+.PHONY: help install lint format check run build
 
 # Variables
 PYTHON = venv/bin/python
 PIP = venv/bin/pip
 RUFF = venv/bin/ruff
+PYINSTALLER = venv/bin/pyinstaller
 
 # make help (Hướng dẫn sử dụng)
 # Khi bạn gõ lệnh: make help (hoặc chỉ gõ chuỗi chữ make), hệ thống sẽ in (@echo) 
@@ -24,6 +25,7 @@ help:
 	@echo "  make format       - Auto-format code layout using Ruff formatter"
 	@echo "  make check        - Verify code formatting and lint rules (CI mode)"
 	@echo "  make run          - Start the FastAPI development server with hot-reload"
+	@echo "  make build        - Package the application into a single executable using PyInstaller"
 
 # make install (Cài đặt toàn bộ các thư viện)
 # Makefile sẽ tự động kích hoạt lệnh cài đặt song song cả 2 file requirements.txt và requirements-dev.txt
@@ -51,3 +53,7 @@ check:
 # Chỉ cần gõ `make run`. Nó sẽ tự chạy uvicorn từ venv mà không cần bạn activate thủ công.
 run:
 	venv/bin/uvicorn main:app --reload
+
+# make build (Đóng gói ứng dụng thành file thực thi duy nhất bằng PyInstaller)
+build:
+	$(PYINSTALLER) --onefile --collect-all uvicorn --collect-all fastapi main.py
