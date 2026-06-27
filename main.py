@@ -136,3 +136,11 @@ app.include_router(
 @app.get("/health", tags=["System"])
 async def health_check():
     return {"status": "ok", "message": "Bot is running"}
+
+
+# Đóng gói ứng dụng thành extension
+if __name__ == "__main__":
+    import uvicorn
+
+    # Khởi chạy FastAPI app trên cổng 8000
+    uvicorn.run(app, host="127.0.0.1", port=8000)
