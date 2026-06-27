@@ -57,24 +57,24 @@ run:
 # make build (Đóng gói ứng dụng thành file thực thi duy nhất bằng PyInstaller)
 # 1 số option hữu ích:
 # --onefile: Đóng gói toàn bộ code và thư viện vào một file duy nhất (nằm trong thư mục dist/ sau khi build xong)
-# --collect-all uvicorn và --collect-all fastapi: Thu thập tất cả tài nguyên đi kèm của Uvicorn và FastAPI để đảm bảo server web chạy bình thường
+# --collect-all uvicorn và --collect-all fastapi: Thu thập toàn bộ package resources đi kèm của Uvicorn và FastAPI để đảm bảo server web chạy bình thường
 # --icon app.ico: Sử dụng icon chỉ định cho ứng dụng (file app.ico nằm cùng thư mục với main.py) (Nếu không gọi option này thì nó sẽ hiển thị icon mặc định của hệ điều hành)
 # --name MyApplication: Đặt tên cho file thực thi (Nếu không gọi option này thì file thực thi sẽ có tên là main.exe)
 # --clean: Xóa cache build cũ
-# --noconsole hoặc --windowed: Ẩn cửa sổ đen của terminal
+# --noconsole hoặc --windowed: Ẩn cửa sổ đen của terminal. Option này chỉ nên dùng nếu đây là: GUI, Desktop app, Tray app
 # --add-data source;destination: Thêm file hoặc thư mục vào file thực thi (source là đường dẫn file/thư mục, destination là đường dẫn đích trong file thực thi). Dấu . là thư mục hiện tại. VD: --add-data "config.json;."
 # --hidden-import: Ép PyInstaller tìm kiếm thêm module (VD: --hidden-import "custom_module")
-# --upx-dir path/to/upx: Sử dụng UPX đã cài sẵn
+# --upx-dir path/to/upx: Sử dụng UPX đã cài sẵn để giảm kích thước exe
 # --strip: Xóa bỏ các symbol không cần thiết khỏi file thực thi để giảm kích thước
 # --debug all: Bật debug mode
 
 # Cách câu lệnh này hoạt động: 
 # PyInstaller sẽ:
-# 1) Đọc main.py
-# 2) Phân tích dependency
-# 3) Gom toàn bộ module cần thiết
-# 4) Build executable
-# 5) Sau khi build sẽ có: build/, dist/, main.spec và file chạy nằm trong dist/main (Hoặc dist/main.exe)
+# 1) Đọc file script chính (main.py). Nó sẽ tạo ra một file cấu hình tạm thời gọi là SyncNotification.spec (nếu chưa có). File này chứa toàn bộ các tham số build mà ta đã truyền từ câu lệnh
+# 2) Quét cây thư mục Dependency (Graph Generation). Nó đi xuyên qua code, tìm tất cả các lệnh import và from ... import .... Nó sẽ gom toàn bộ các file .py của dự án và các thư viện trong venv (bao gồm toàn bộ file của fastapi và uvicorn do có lệnh --collect-all) để tạo thành một sơ đồ phụ thuộc
+# 3) Tạo thư mục build/ và biên dịch sang C-level. Nó tạo thư mục build/. Tại đây, nó sẽ gom tất cả các file Python đã quét được, biên dịch chúng thành file bytecode .pyc. Đồng thời, nó thu thập các file thư viện động liên kết hệ thống (như các file .dll trên Windows hoặc .so trên Linux)
+# 4) Đóng gói và nén (Assembly & Compression). PyInstaller sẽ lấy toàn bộ các file bytecode .pyc, các file .dll, và các asset phụ trợ, nén tất cả lại thành một khối dữ liệu nhị phân duy nhất bằng zlib
+# 5) Tạo file Executable hoàn chỉnh trong dist/. Nó tạo một file chạy "mồi" (bootloader) có tên là SyncNotification.exe nằm trong thư mục dist/. Khối dữ liệu nén ở Bước 4 sẽ được nhúng trực tiếp vào đuôi của file exe mồi này
 
 build:
-	$(PYINSTALLER) --onefile --collect-all uvicorn --collect-all fastapi --clean --strip --noconsole --icon nttts.ico --name SyncNotification main.py
+	$(PYINSTALLER) --onefile --collect-all uvicorn --collect-all fastapi --clean --strip --icon nttts.ico --name SyncNotification main.py
