@@ -55,5 +55,26 @@ run:
 	venv/bin/uvicorn main:app --reload
 
 # make build (Đóng gói ứng dụng thành file thực thi duy nhất bằng PyInstaller)
+# 1 số option hữu ích:
+# --onefile: Đóng gói toàn bộ code và thư viện vào một file duy nhất (nằm trong thư mục dist/ sau khi build xong)
+# --collect-all uvicorn và --collect-all fastapi: Thu thập tất cả tài nguyên đi kèm của Uvicorn và FastAPI để đảm bảo server web chạy bình thường
+# --icon app.ico: Sử dụng icon chỉ định cho ứng dụng (file app.ico nằm cùng thư mục với main.py) (Nếu không gọi option này thì nó sẽ hiển thị icon mặc định của hệ điều hành)
+# --name MyApplication: Đặt tên cho file thực thi (Nếu không gọi option này thì file thực thi sẽ có tên là main.exe)
+# --clean: Xóa cache build cũ
+# --noconsole hoặc --windowed: Ẩn cửa sổ đen của terminal
+# --add-data source;destination: Thêm file hoặc thư mục vào file thực thi (source là đường dẫn file/thư mục, destination là đường dẫn đích trong file thực thi). Dấu . là thư mục hiện tại. VD: --add-data "config.json;."
+# --hidden-import: Ép PyInstaller tìm kiếm thêm module (VD: --hidden-import "custom_module")
+# --upx-dir path/to/upx: Sử dụng UPX đã cài sẵn
+# --strip: Xóa bỏ các symbol không cần thiết khỏi file thực thi để giảm kích thước
+# --debug all: Bật debug mode
+
+# Cách câu lệnh này hoạt động: 
+# PyInstaller sẽ:
+# 1) Đọc main.py
+# 2) Phân tích dependency
+# 3) Gom toàn bộ module cần thiết
+# 4) Build executable
+# 5) Sau khi build sẽ có: build/, dist/, main.spec và file chạy nằm trong dist/main (Hoặc dist/main.exe)
+
 build:
-	$(PYINSTALLER) --onefile --collect-all uvicorn --collect-all fastapi main.py
+	$(PYINSTALLER) --onefile --collect-all uvicorn --collect-all fastapi --clean --strip --noconsole --icon nttts.ico --name SyncNotification main.py
