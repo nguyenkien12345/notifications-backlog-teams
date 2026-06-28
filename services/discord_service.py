@@ -91,7 +91,8 @@ class DiscordService:
         color = self.get_theme_color(notification.reason)
 
         fields = []
-        text_content = ""
+        comment_content = ""
+        desc_content = ""
 
         if notification.project:
             fields.append(
@@ -140,8 +141,9 @@ class DiscordService:
                 )
 
             if notification.comment and notification.comment.content:
-                text_content = truncate_text(notification.comment.content, max_length=1000)
-            elif notification.issue.description:
+                comment_content = truncate_text(notification.comment.content, max_length=1000)
+
+            if notification.issue.description:
                 parsed_sections = self.parse_description_sections(notification.issue.description)
                 if parsed_sections:
                     formatted_parts = []
@@ -149,9 +151,9 @@ class DiscordService:
                         if content:
                             truncated_content = truncate_text(content, max_length=500)
                             formatted_parts.append(f"**{section_title}:**\n{truncated_content}")
-                    text_content = "\n\n".join(formatted_parts)
+                    desc_content = "\n\n".join(formatted_parts)
                 else:
-                    text_content = truncate_text(notification.issue.description, max_length=1000)
+                    desc_content = truncate_text(notification.issue.description, max_length=1000)
 
         elif notification.pullRequest:
             fields.append(
@@ -170,9 +172,9 @@ class DiscordService:
             )
 
             if notification.comment and notification.comment.content:
-                text_content = truncate_text(notification.comment.content, max_length=1000)
-            elif notification.pullRequest.description:
-                text_content = truncate_text(notification.pullRequest.description, max_length=1000)
+                comment_content = truncate_text(notification.comment.content, max_length=1000)
+            if notification.pullRequest.description:
+                desc_content = truncate_text(notification.pullRequest.description, max_length=1000)
 
         embed = {
             "title": title,
@@ -182,8 +184,15 @@ class DiscordService:
             "footer": {"text": "Backlog Notification Bot"},
         }
 
-        if text_content:
-            embed["description"] = f"**Content:**\n\n{text_content}"
+        # Combine text content
+        text_parts = []
+        if comment_content:
+            text_parts.append(f"**Comment:**\n\n{comment_content}")
+        if desc_content:
+            text_parts.append(f"**Description:**\n\n{desc_content}")
+
+        if text_parts:
+            embed["description"] = "\n\n---\n\n".join(text_parts)
 
         payload = {"username": "Smart Reminder Bot", "embeds": [embed]}
         return payload
