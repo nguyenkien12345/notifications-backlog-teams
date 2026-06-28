@@ -98,7 +98,7 @@ class TeamsService:
         # + re.MULTILINE: Nếu không có re.MULTILINE thì chỉ áp dụng cho: đầu toàn bộ chuỗi và cuối toàn bộ chuỗi. Có re.MULTILINE thì áp dụng cho: đầu mỗi dòng và cuối mỗi dòng
 
         header_pattern = re.compile(
-            r"^(?P<prefix>#*)\s*(?P<name>"
+            r"^(?P<prefix>[#*]*)\s*(?P<name>"
             + "|".join(re.escape(h) for h in flat_headers)
             + r")\s*$",
             re.MULTILINE,

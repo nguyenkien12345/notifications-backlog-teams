@@ -58,7 +58,7 @@ class DiscordService:
                 header_to_key[alias] = key
 
         header_pattern = re.compile(
-            r"^(?P<prefix>#*)\s*(?P<name>"
+            r"^(?P<prefix>[#*]*)\s*(?P<name>"
             + "|".join(re.escape(h) for h in flat_headers)
             + r")\s*$",
             re.MULTILINE,
