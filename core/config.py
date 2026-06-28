@@ -43,6 +43,9 @@ class Settings(BaseSettings):
     # Teams Settings
     TEAMS_WEBHOOK_URL: SecretStr = Field(..., alias="TEAMS_WEBHOOK_URL")
 
+    # Discord Settings
+    DISCORD_WEBHOOK_URL: SecretStr | None = Field(None, alias="DISCORD_WEBHOOK_URL")
+
     # Bot Settings
     SYNC_INTERVAL_MINUTES: int = Field(5, alias="SYNC_INTERVAL_MINUTES")
     STATE_FILE_PATH: str = Field("storage/state.json", alias="STATE_FILE_PATH")

@@ -8,9 +8,9 @@ workspace_dir = os.path.dirname(os.path.abspath(__file__))
 # Khi chúng ta thực thi một script độc lập nằm sâu trong thư mục con, Python đôi khi không hiểu các thư mục như core hay services nằm ở đâu để import. Dòng này lấy đường dẫn tuyệt đối của thư mục chứa file hiện tại và ép Python phải nhìn vào đó, giúp lệnh from core.config import settings chạy mượt mà mà không bị lỗi ModuleNotFoundError
 sys.path.append(workspace_dir)
 
-import httpx
+import httpx  # noqa: E402
 
-from core.config import settings
+from core.config import settings  # noqa: E402
 
 
 async def fetch_recent_notifications(days=7):

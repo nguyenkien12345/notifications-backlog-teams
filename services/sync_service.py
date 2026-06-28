@@ -3,6 +3,7 @@ from datetime import datetime
 
 from core.config import settings
 from services.backlog_service import BacklogService
+from services.discord_service import DiscordService
 from services.state_service import StateService
 from services.teams_service import TeamsService
 
@@ -13,6 +14,7 @@ class SyncService:
     def __init__(self):
         self.backlog_service = BacklogService()
         self.teams_service = TeamsService()
+        self.discord_service = DiscordService()
         self.state_service = StateService()
 
     async def sync_now(self) -> int:
@@ -78,6 +80,15 @@ class SyncService:
                     # Nếu bạn có 10 tin, gửi được 5 tin thành công, đến tin số 6 mạng đột ngột bị đứt sập nguồn. Nhờ có ghi log, hệ thống đã kịp lưu lại mốc tin số 5. Lượt sau mạng có lại, Bot sẽ chạy tiếp từ tin số 6, hoàn toàn không bị gửi lặp lại 5 tin đầu tiên lên Teams!
                     self.state_service.update_state(last_processed_id=last_id)
                     synced_count += 1
+
+                    # Attempt to push to Discord as well (if configured)
+                    try:
+                        await self.discord_service.send_notification(notification)
+                    except Exception as discord_err:
+                        logger.error(
+                            f"Unexpected error while sending notification {notification.id} to Discord: {discord_err}",
+                            exc_info=True,
+                        )
                 else:
                     # On failure, stop processing this batch to ensure we retry this notification next time
                     # Nếu tin nhắn hiện tại gửi sang Teams bị lỗi (thất bại), Bot sẽ lập tức dừng vòng lặp for (bằng lệnh return) ngay lập tức, không gửi tiếp các tin phía sau nữa vì

@@ -96,7 +96,7 @@ class TeamsService:
         # + (?P<name>前提条件|手順|結果) => Match vào tên header => Match một trong các giá trị sau: 前提条件 hoặc 手順 hoặc 結果
         # + \s*$: Cho phép khoảng trắng cuối dòng rồi kết thúc dòng
         # + re.MULTILINE: Nếu không có re.MULTILINE thì chỉ áp dụng cho: đầu toàn bộ chuỗi và cuối toàn bộ chuỗi. Có re.MULTILINE thì áp dụng cho: đầu mỗi dòng và cuối mỗi dòng
-        
+
         header_pattern = re.compile(
             r"^(?P<prefix>#*)\s*(?P<name>"
             + "|".join(re.escape(h) for h in flat_headers)
@@ -144,7 +144,7 @@ class TeamsService:
         # Groups:
         # prefix = "###"
         # name = "期待する動作"
-        
+
         # Sau khi chạy matches = list(header_pattern.finditer(description)) ta sẽ có 4 match:
         # Match 0: # 前提条件
         # Match 1: ## 手順
@@ -165,7 +165,9 @@ class TeamsService:
             # ### 結果
             # |
             # Con trỏ đứng ở đây.
-            start_pos = match.end() # Vị trí kết thúc của Header hiện tại (bắt đầu phần nội dung bên dưới nó)
+            start_pos = (
+                match.end()
+            )  # Vị trí kết thúc của Header hiện tại (bắt đầu phần nội dung bên dưới nó)
 
             # start() nghĩa là: vị trí bắt đầu của header tiếp theo. Nếu là Header cuối cùng, lấy đến hết chuỗi.
             # Ví dụ:
@@ -175,7 +177,9 @@ class TeamsService:
             # Con trỏ đứng tại đây.
             end_pos = matches[idx + 1].start() if idx + 1 < len(matches) else len(description)
 
-            content = description[start_pos:end_pos].strip() # Đây là slicing string. Cắt từ start_pos đến trước end_pos. Kết quả là No error. strip sẽ xoá space, tab, newline ở đầu cuối
+            content = description[
+                start_pos:end_pos
+            ].strip()  # Đây là slicing string. Cắt từ start_pos đến trước end_pos. Kết quả là No error. strip sẽ xoá space, tab, newline ở đầu cuối
 
             # Chỉ lưu section lần đầu tiên, hoặc thay thế nếu giá trị cũ đang rỗng còn giá trị mới có nội dung.
             if key not in result or (not result[key] and content):
