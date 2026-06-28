@@ -200,7 +200,8 @@ class TeamsService:
         backlog_url = self.get_backlog_url(notification)
 
         facts = []
-        text_content = ""
+        comment_content = ""
+        desc_content = ""
         subtitle = ""
 
         if notification.project:
@@ -227,18 +228,19 @@ class TeamsService:
             subtitle = f"{notification.project.projectKey if notification.project else ''} - {notification.issue.issueKey}"
 
             if notification.comment and notification.comment.content:
-                text_content = truncate_text(notification.comment.content, max_length=500)
-            elif notification.issue.description:
+                comment_content = truncate_text(notification.comment.content, max_length=500)
+
+            if notification.issue.description:
                 parsed_sections = self.parse_description_sections(notification.issue.description)
                 if parsed_sections:
                     formatted_parts = []
-                    for title, content in parsed_sections.items():
-                        if content:
-                            truncated_content = truncate_text(content, max_length=500)
-                            formatted_parts.append(f"**{title}:**\n{truncated_content}")
-                    text_content = "\n\n".join(formatted_parts)
+                    for title_sec, content_sec in parsed_sections.items():
+                        if content_sec:
+                            truncated_content = truncate_text(content_sec, max_length=500)
+                            formatted_parts.append(f"**{title_sec}:**\n{truncated_content}")
+                    desc_content = "\n\n".join(formatted_parts)
                 else:
-                    text_content = truncate_text(notification.issue.description, max_length=500)
+                    desc_content = truncate_text(notification.issue.description, max_length=500)
 
         elif notification.pullRequest:
             facts.append({"name": "PR Number", "value": f"#{notification.pullRequest.number}"})
@@ -246,9 +248,9 @@ class TeamsService:
             subtitle = f"PR #{notification.pullRequest.number} - {notification.pullRequest.title}"
 
             if notification.comment and notification.comment.content:
-                text_content = truncate_text(notification.comment.content, max_length=500)
-            elif notification.pullRequest.description:
-                text_content = truncate_text(notification.pullRequest.description, max_length=500)
+                comment_content = truncate_text(notification.comment.content, max_length=500)
+            if notification.pullRequest.description:
+                desc_content = truncate_text(notification.pullRequest.description, max_length=500)
 
         section: dict[str, Any] = {
             "activityTitle": title,
@@ -257,8 +259,15 @@ class TeamsService:
             "facts": facts,
         }
 
-        if text_content:
-            section["text"] = f"**Content:**\n\n{text_content}"
+        # Combine text content
+        text_parts = []
+        if comment_content:
+            text_parts.append(f"**Comment:**\n\n{comment_content}")
+        if desc_content:
+            text_parts.append(f"**Description:**\n\n{desc_content}")
+
+        if text_parts:
+            section["text"] = "\n\n---\n\n".join(text_parts)
 
         # - potentialAction: Ra lệnh cho Teams vẽ ra một cái Nút bấm (Action Button) tên là "View in Backlog". Khi người dùng trên Teams click vào nút này, trình duyệt sẽ tự động mở ra đường link backlog_url dẫn thẳng tới trang công việc đó
         card = {
@@ -291,7 +300,8 @@ class TeamsService:
 
         facts = []
         subtitle = ""
-        text_content = ""
+        comment_content = ""
+        desc_content = ""
 
         if notification.project:
             facts.append({"title": "Project", "value": notification.project.name})
@@ -315,18 +325,19 @@ class TeamsService:
             subtitle = f"{notification.project.projectKey if notification.project else ''} - {notification.issue.issueKey}"
 
             if notification.comment and notification.comment.content:
-                text_content = truncate_text(notification.comment.content, max_length=500)
-            elif notification.issue.description:
+                comment_content = truncate_text(notification.comment.content, max_length=500)
+
+            if notification.issue.description:
                 parsed_sections = self.parse_description_sections(notification.issue.description)
                 if parsed_sections:
                     formatted_parts = []
-                    for title, content in parsed_sections.items():
-                        if content:
-                            truncated_content = truncate_text(content, max_length=500)
-                            formatted_parts.append(f"**{title}:**\n{truncated_content}")
-                    text_content = "\n\n".join(formatted_parts)
+                    for title_sec, content_sec in parsed_sections.items():
+                        if content_sec:
+                            truncated_content = truncate_text(content_sec, max_length=500)
+                            formatted_parts.append(f"**{title_sec}:**\n{truncated_content}")
+                    desc_content = "\n\n".join(formatted_parts)
                 else:
-                    text_content = truncate_text(notification.issue.description, max_length=500)
+                    desc_content = truncate_text(notification.issue.description, max_length=500)
 
         elif notification.pullRequest:
             facts.append({"title": "PR Number", "value": f"#{notification.pullRequest.number}"})
@@ -334,9 +345,9 @@ class TeamsService:
             subtitle = f"PR #{notification.pullRequest.number} - {notification.pullRequest.title}"
 
             if notification.comment and notification.comment.content:
-                text_content = truncate_text(notification.comment.content, max_length=500)
-            elif notification.pullRequest.description:
-                text_content = truncate_text(notification.pullRequest.description, max_length=500)
+                comment_content = truncate_text(notification.comment.content, max_length=500)
+            if notification.pullRequest.description:
+                desc_content = truncate_text(notification.pullRequest.description, max_length=500)
 
         body_elements: list[dict[str, Any]] = [
             {
@@ -383,14 +394,26 @@ class TeamsService:
                 }
             )
 
-        #  Nội dung tin nhắn
-        if text_content:
+        # Nội dung bình luận
+        if comment_content:
             body_elements.append(
                 {
                     "type": "TextBlock",
-                    "text": f"**Content:**\n\n{text_content}",
+                    "text": f"**Comment:**\n\n{comment_content}",
                     "wrap": True,
-                    "spacing": "Medium",  # Tạo một khoảng cách vừa phải với bảng Facts phía trên
+                    "spacing": "Medium",
+                }
+            )
+
+        # Nội dung mô tả
+        if desc_content:
+            body_elements.append(
+                {
+                    "type": "TextBlock",
+                    "text": f"**Description:**\n\n{desc_content}",
+                    "wrap": True,
+                    "spacing": "Medium",
+                    "separator": bool(comment_content),
                 }
             )
 
