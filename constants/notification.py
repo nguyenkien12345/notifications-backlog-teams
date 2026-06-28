@@ -1,47 +1,47 @@
 # Mapping of Backlog notification reason codes to human-readable action descriptions.
-# Reference: https://backlog.com/developer/api/2/get-notification/
+# Reference: https://developer.nulab.com/docs/backlog/api/2/get-notification/
 REASON_DESCRIPTIONS = {
     1: "assigned you an issue",
-    2: "sent you a notification (mention)",
-    3: "commented on an issue",
-    4: "added an issue",
-    5: "updated/related activity on an issue",
-    6: "assigned you a pull request",
-    7: "sent you a pull request notification (mention)",
-    8: "commented on a pull request",
-    9: "added a pull request",
-    10: "updated a pull request",
-    11: "related activity on a pull request",
+    2: "commented on an issue",
+    3: "added an issue",
+    4: "updated/related activity on an issue",
+    5: "attached a file to an issue",
+    6: "added you to the project",
+    9: "sent you a notification",
+    10: "assigned you a pull request",
+    11: "commented on a pull request",
+    12: "added a pull request",
+    13: "updated a pull request",
 }
 
 # Emojis associated with notification reasons to make Teams alerts visually engaging.
 ACTION_EMOJIS = {
     1: "📥",  # Assigned
-    2: "🔔",  # Mention
-    3: "💬",  # Comment
-    4: "➕",  # Issue Added
-    5: "🔄",  # Issue Updated
-    6: "🧑‍💻",  # PR Assigned
-    7: "🔔",  # PR Mention
-    8: "💬",  # PR Comment
-    9: "🚀",  # PR Added
-    10: "🔄",  # PR Updated
-    11: "🔗",  # PR Related
+    2: "💬",  # Comment
+    3: "➕",  # Issue Created
+    4: "🔄",  # Issue Updated
+    5: "📎",  # File Attached
+    6: "👋",  # User Added to Project
+    9: "🔔",  # Other
+    10: "🧑‍💻",  # PR Assigned
+    11: "💬",  # PR Comment
+    12: "🚀",  # PR Created
+    13: "🔄",  # PR Updated
 }
 
 # Hex color mapping for MS Teams card headers based on notification reason.
 THEME_COLORS = {
     1: "E67E22",  # Orange (Assigned)
-    2: "3498DB",  # Blue (Mention)
-    3: "2ECC71",  # Green (Comment)
-    4: "27AE60",  # Dark Green (Issue Added)
-    5: "95A5A6",  # Gray (Issue Updated)
-    6: "F1C40F",  # Yellow (PR Assigned)
-    7: "3498DB",  # Blue (PR Mention)
-    8: "2ECC71",  # Green (PR Comment)
-    9: "9B59B6",  # Purple (PR Added)
-    10: "8E44AD",  # Dark Purple (PR Updated)
-    11: "BDC3C7",  # Light Gray (PR Related)
+    2: "2ECC71",  # Green (Comment)
+    3: "27AE60",  # Dark Green (Issue Created)
+    4: "95A5A6",  # Gray (Issue Updated)
+    5: "BDC3C7",  # Light Gray (File Attached)
+    6: "3498DB",  # Blue (User Added)
+    9: "7F8C8D",  # Gray (Other)
+    10: "F1C40F",  # Yellow (PR Assigned)
+    11: "2ECC71",  # Green (PR Comment)
+    12: "9B59B6",  # Purple (PR Created)
+    13: "8E44AD",  # Dark Purple (PR Updated)
 }
 
 DEFAULT_THEME_COLOR = "7F8C8D"
